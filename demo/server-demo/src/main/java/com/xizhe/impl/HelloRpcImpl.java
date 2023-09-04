@@ -1,4 +1,6 @@
-package com.xizhe;
+package com.xizhe.impl;
+
+import com.xizhe.HelloRpc;
 
 /**
  * @author admin

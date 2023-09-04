@@ -15,7 +15,10 @@
         <module>manager</module>
     </modules>
 
+
     <properties>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <maven.compiler.source>1.8</maven.compiler.source>
         <netty.version>4.1.89.Final</netty.version>
         <junit.version>4.13.2</junit.version>
         <zookeeper.version>3.8.1</zookeeper.version>
@@ -31,6 +34,14 @@
             <artifactId>commons-lang3</artifactId>
             <version>${commons-lang3.version}</version>
         </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+            <version>1.7.36</version>
+        </dependency>
+
+
 
     </dependencies>
 
@@ -75,6 +86,5 @@
         </dependencies>
 
     </dependencyManagement>
-
 
 </project>
