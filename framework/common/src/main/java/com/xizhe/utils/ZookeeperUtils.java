@@ -1,11 +1,13 @@
 package com.xizhe.utils;
 
 import com.xizhe.Constant;
+import com.xizhe.ZookeeperNode;
 import com.xizhe.excptions.ZookeeperException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.zookeeper.*;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 /**
@@ -16,7 +18,7 @@ import java.util.concurrent.CountDownLatch;
  */
 
 @Slf4j
-public class ZookeeperUtil {
+public class ZookeeperUtils {
 
     public static ZooKeeper createZookeeper() {
         String connectString = Constant.DEFAULT_ZK_CONNECT;
@@ -56,7 +58,7 @@ public class ZookeeperUtil {
      * @param watcher watcher
      * @param createMode 节点的类型
      */
-    public static Boolean createNode(ZooKeeper zooKeeper,ZookeeperNode node,Watcher watcher,CreateMode createMode) {
+    public static boolean createNode(ZooKeeper zooKeeper, ZookeeperNode node, Watcher watcher, CreateMode createMode) {
         try {
             if(zooKeeper.exists(node.getNodePath(),watcher) == null) {
                 String result = zooKeeper.create(node.getNodePath(), node.getData(),
@@ -73,6 +75,24 @@ public class ZookeeperUtil {
         }
     }
 
+
+    /**
+     * 判断节点是否存在
+     * @param zooKeeper zk实例
+     * @param nodePath 节点路径
+     * @param watcher watcher
+     * @return true: 存在 | false: 不存在
+     */
+    public static boolean exist(ZooKeeper zooKeeper,String nodePath,Watcher watcher) {
+        try {
+            return zooKeeper.exists(nodePath,watcher) != null;
+        } catch (KeeperException | InterruptedException e) {
+            log.error("判断节点[{}]是否存在发生异常",nodePath,e);
+            throw new ZookeeperException(e);
+        }
+
+    }
+
     /**
      * 关闭zk实例
      * @param zookeeper
@@ -85,4 +105,12 @@ public class ZookeeperUtil {
         }
     }
 
+    public static List<String> getChildren(ZooKeeper zooKeeper, String serviceNode,Watcher watcher) {
+        try {
+            return zooKeeper.getChildren(serviceNode, watcher);
+        } catch (KeeperException | InterruptedException e) {
+            log.error("获取【{}】子节点出现异常",serviceNode,e);
+            throw new ZookeeperException(e);
+        }
+    }
 }

@@ -1,5 +1,6 @@
 package com.xizhe;
 
+import com.xizhe.discovery.RegistryConfig;
 import com.xizhe.impl.HelloRpcImpl;
 
 /**

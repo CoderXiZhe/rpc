@@ -13,4 +13,8 @@ public class Constant {
 
     public static final Integer TIME_OUT = 10000;
 
+    public static final String BASE_PROVIDERS_PATH = "/rpc-metadata/providers";
+
+    public static final String BASE_CONSUMERS_PATH = "/rpc-metadata/consumers";
+
 }

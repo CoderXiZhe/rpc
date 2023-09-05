@@ -1,5 +1,7 @@
 package com.xizhe;
 
+import com.xizhe.discovery.RegistryConfig;
+
 /**
  * @author admin
  * @version 1.0

@@ -1,7 +1,6 @@
 package com.xizhe;
 
-import com.xizhe.utils.ZookeeperNode;
-import com.xizhe.utils.ZookeeperUtil;
+import com.xizhe.utils.ZookeeperUtils;
 import org.apache.zookeeper.*;
 
 import java.util.ArrayList;
@@ -18,7 +17,7 @@ import java.util.List;
 
 public class Application {
     public static void main(String[] args) {
-        ZooKeeper zooKeeper = ZookeeperUtil.createZookeeper();
+        ZooKeeper zooKeeper = ZookeeperUtils.createZookeeper();
         // 定义节点和数据
         String basePath = "/rpc-metadata";
         String providerPath = basePath + "/providers";
@@ -30,10 +29,10 @@ public class Application {
         List<Object> l = new ArrayList<>();
 
         Arrays.asList(baseNode,providerNode,consumerNode).forEach(node -> {
-            ZookeeperUtil.createNode(zooKeeper, node,null,CreateMode.PERSISTENT);
+            ZookeeperUtils.createNode(zooKeeper, node,null,CreateMode.PERSISTENT);
         });
 
-        ZookeeperUtil.close(zooKeeper);
+        ZookeeperUtils.close(zooKeeper);
 
     }
 }

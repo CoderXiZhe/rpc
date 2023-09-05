@@ -1,4 +1,4 @@
-package com.xizhe.utils;
+package com.xizhe;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
