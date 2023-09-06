@@ -25,7 +25,8 @@ public class Application {
                 .reference(reference);
 
         HelloRpc proxy = reference.get();
-        proxy.sayHello("rpc");
+        String result = proxy.sayHello("rpc");
+        System.out.println(result);
 
 
     }

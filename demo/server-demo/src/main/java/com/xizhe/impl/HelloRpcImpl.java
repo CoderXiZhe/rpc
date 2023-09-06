@@ -13,6 +13,6 @@ public class HelloRpcImpl implements HelloRpc {
 
     @Override
     public String sayHello(String msg) {
-        return "hello rpc!";
+        return msg;
     }
 }

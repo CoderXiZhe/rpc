@@ -1,13 +1,10 @@
 package com.xizhe;
 
-import com.xizhe.discovery.Registry;
 import com.xizhe.discovery.RegistryConfig;
+import com.xizhe.proxy.handler.RpcConsumerInvocationHandler;
 import lombok.extern.slf4j.Slf4j;
 
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.net.InetSocketAddress;
 
 /**
  * @author admin
@@ -18,6 +15,7 @@ import java.net.InetSocketAddress;
 
 @Slf4j
 public class ReferenceConfig<T> {
+
     private Class<T> interfaceRef;
 
     private RegistryConfig registryConfig;
@@ -39,25 +37,15 @@ public class ReferenceConfig<T> {
     }
 
 
-
     public T get() {
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
         Class[] classes = new Class[]{interfaceRef};
         // 生成代理对象
-        Object helloProxy = Proxy.newProxyInstance(classLoader, classes, new InvocationHandler() {
-            @Override
-            public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-                log.info("method --> {}",method.getName());
-                log.info("args --> {}",args);
-
-                // 1. 发现服务 从注册中心寻找一个可用服务
-                Registry registry = registryConfig.getRegistry();
-                InetSocketAddress address = registry.discovery(interfaceRef.getName());
-                log.debug("consumer发现服务【{}】可用主机:{}",interfaceRef.getName(),address);
-                // 2. 使用netty连接服务器 发送调用的服务名称 + 方法名 + 参数列表 得到返回结果
-                return null;
-            }
-        });
+        Object helloProxy = Proxy.newProxyInstance(classLoader, classes,
+                new RpcConsumerInvocationHandler(registryConfig.getRegistry(),interfaceRef));
         return (T) helloProxy;
     }
+
+
+
 }

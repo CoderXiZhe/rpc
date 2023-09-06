@@ -21,6 +21,10 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.charset.Charset;
 import java.util.Arrays;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -100,4 +104,24 @@ public class test {
         System.out.println(Arrays.toString(bytes));
     }
 
+
+    @Test
+    public void test4Future() {
+        CompletableFuture<Integer> future = new CompletableFuture();
+        new Thread(() -> {
+            int i = 8;
+            try {
+                TimeUnit.SECONDS.sleep(3);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            future.complete(i);
+        }).start();
+        try {
+            Integer integer = future.get(6, TimeUnit.SECONDS);
+            System.out.println(integer);
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            e.printStackTrace();
+        }
+    }
 }

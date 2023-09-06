@@ -53,9 +53,7 @@ public class AppServer {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-
         }
-
     }
 
     public static void main(String[] args) {

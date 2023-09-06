@@ -21,7 +21,7 @@ public interface Registry {
 
     /**
      * 从注册中心发现并拉取一个可用服务
-     * @param name 服务的名称
+     * @param serviceName 服务的名称
      * @return 服务的 ip+port
      */
     InetSocketAddress discovery(String serviceName);

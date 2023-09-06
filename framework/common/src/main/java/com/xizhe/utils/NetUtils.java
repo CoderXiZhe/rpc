@@ -33,7 +33,7 @@ public class NetUtils {
                         continue;
                     }
                     String ipAddress = inetAddress.getHostAddress();
-                    System.out.println("局域网ip:" + ipAddress);
+                    log.debug("局域网ip:{}",ipAddress);
                     return ipAddress;
                 }
             }
