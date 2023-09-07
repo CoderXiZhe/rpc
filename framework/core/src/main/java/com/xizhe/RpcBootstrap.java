@@ -1,5 +1,7 @@
 package com.xizhe;
 
+import com.xizhe.channelHandler.handler.MethodCallHandler;
+import com.xizhe.channelHandler.handler.RpcMessageDecoder;
 import com.xizhe.discovery.Registry;
 import com.xizhe.discovery.RegistryConfig;
 import io.netty.bootstrap.ServerBootstrap;
@@ -9,6 +11,7 @@ import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.logging.LoggingHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.CharSet;
 
@@ -45,7 +48,7 @@ public class RpcBootstrap {
     private Registry registry ;
 
     // 维护一个已经发布的服务列表 key: interface的全限定名 value:serviceConfig
-    private static final Map<String,ServiceConfig<?>> SERVER_LIST = new ConcurrentHashMap<>(16);
+    public static final Map<String,ServiceConfig<?>> SERVER_LIST = new ConcurrentHashMap<>(16);
     // 维护一个Channel缓存, InetSocketAddress作为key需要重写equals和hashcode
     public static final Map<InetSocketAddress, Channel> CHANNEL_CACHE = new ConcurrentHashMap<>(16);
     // 维护一个对外挂起的completablefuture
@@ -130,15 +133,10 @@ public class RpcBootstrap {
                     .childHandler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         protected void initChannel(SocketChannel socketChannel) throws Exception {
-                            socketChannel.pipeline().addLast(new SimpleChannelInboundHandler<ByteBuf>() {
-                                @Override
-                                protected void channelRead0(ChannelHandlerContext channelHandlerContext, ByteBuf msg) throws Exception {
-                                    log.debug("服务端收到消息：{}",msg.toString(StandardCharsets.UTF_8));
-
-                                    channelHandlerContext.channel().writeAndFlush(
-                                            Unpooled.copiedBuffer("rpc-server:hello".getBytes()));
-                                }
-                            });
+                            socketChannel.pipeline()
+                                    .addLast(new LoggingHandler())
+                                    .addLast(new RpcMessageDecoder())
+                                    .addLast(new MethodCallHandler());
                         }
                     })
                     .localAddress(new InetSocketAddress(port));

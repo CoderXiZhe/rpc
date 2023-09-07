@@ -3,7 +3,10 @@ package com.xizhe.proxy.handler;
 import com.xizhe.RpcBootstrap;
 import com.xizhe.discovery.NettyBootstrapInitializer;
 import com.xizhe.discovery.Registry;
+import com.xizhe.enumeration.RequestType;
 import com.xizhe.excptions.NetWorkException;
+import com.xizhe.transport.message.RequestPayload;
+import com.xizhe.transport.message.RpcRequest;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
@@ -51,11 +54,26 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
         Channel channel = getAvailableChannel(address);
         log.debug("获取了与【{}】建立的连接通道,准备发送数据",address.toString());
         // 3. 封装报文
-        // todo 封装报文
+        RequestPayload requestPayload = RequestPayload.builder()
+                .interfaceName(interfaceRef.getName())
+                .method(method.getName())
+                .parameterType(method.getParameterTypes())
+                .parameterValue(args)
+                .returnType(method.getReturnType())
+                .build();
+
+        RpcRequest request = RpcRequest.builder()
+                .requestId(1L)
+                .requestType(RequestType.REQUEST.getId())
+                .compressType((byte) 1)
+                .serializeType((byte) 1)
+                .requestPayload(requestPayload)
+                .build();
+
         CompletableFuture<Object> future = new CompletableFuture<>();
         // 将future暴露出去 等到服务端提供响应时候调用complete方法
         RpcBootstrap.PENDING_REQUEST.put(1L,future);
-        channel.writeAndFlush(Unpooled.copiedBuffer("rpc-consumer:hello".getBytes()))
+        channel.writeAndFlush(request)
                 .addListener((ChannelFutureListener) promise -> {
             // 当数据已经写完 promise就结束了
             // 我们需要的是 数据写完后 服务端给的返回值
