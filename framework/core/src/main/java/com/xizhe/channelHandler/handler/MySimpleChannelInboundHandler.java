@@ -1,6 +1,7 @@
 package com.xizhe.channelHandler.handler;
 
 import com.xizhe.RpcBootstrap;
+import com.xizhe.transport.message.RpcResponse;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -17,13 +18,12 @@ import java.util.concurrent.CompletableFuture;
  */
 
 @Slf4j
-public class MySimpleChannelInboundHandler extends SimpleChannelInboundHandler<ByteBuf> {
+public class MySimpleChannelInboundHandler extends SimpleChannelInboundHandler<RpcResponse> {
     @Override
-    protected void channelRead0(ChannelHandlerContext channelHandlerContext, ByteBuf msg) throws Exception {
+    protected void channelRead0(ChannelHandlerContext channelHandlerContext, RpcResponse response) throws Exception {
         // 服务端响应的结果
-        String result = msg.toString(StandardCharsets.UTF_8);
-        log.debug("客户端收到响应:{}", result);
-        CompletableFuture<Object> future = RpcBootstrap.PENDING_REQUEST.get(1L);
-        future.complete(result);
+        log.debug("客户端收到响应:{}", response.getBody());
+        CompletableFuture<Object> future = RpcBootstrap.PENDING_REQUEST.get(response.getRequestId());
+        future.complete(response.getBody());
     }
 }

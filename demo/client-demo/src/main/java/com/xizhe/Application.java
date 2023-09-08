@@ -1,6 +1,7 @@
 package com.xizhe;
 
 import com.xizhe.discovery.RegistryConfig;
+import com.xizhe.serialize.SerializerType;
 
 /**
  * @author admin
@@ -22,6 +23,7 @@ public class Application {
         RpcBootstrap.getInstance()
                 .application("first-rpc-consumer")
                 .registry(new RegistryConfig("zookeeper://127.0.0.1:2181"))
+                .serialize(SerializerType.HESSIAN)
                 .reference(reference);
 
         HelloRpc proxy = reference.get();

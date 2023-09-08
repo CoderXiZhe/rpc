@@ -2,6 +2,10 @@ package com.xizhe.channelHandler.handler;
 
 import com.xizhe.MessageFormatConstant;
 import com.xizhe.enumeration.RequestType;
+import com.xizhe.serialize.JdkSerializer;
+import com.xizhe.serialize.Serializer;
+import com.xizhe.serialize.SerializerFactory;
+import com.xizhe.serialize.SerializerType;
 import com.xizhe.transport.message.RequestPayload;
 import com.xizhe.transport.message.RpcRequest;
 import io.netty.buffer.ByteBuf;
@@ -26,11 +30,13 @@ import java.io.ObjectOutputStream;
  */
 
 @Slf4j
-public class RpcMessageEncoder extends MessageToByteEncoder<RpcRequest> {
+public class RpcRequestEncoder extends MessageToByteEncoder<RpcRequest> {
     @Override
     protected void encode(ChannelHandlerContext channelHandlerContext,
                           RpcRequest rpcRequest, ByteBuf byteBuf) throws Exception {
-        byte[] bodyBytes = getBodyBytes(rpcRequest.getRequestPayload());
+        byte serializeType = rpcRequest.getSerializeType();
+        log.debug("请求【{}】使用[{}]序列化方式",rpcRequest.getRequestId(),SerializerType.getNameByType(serializeType));
+        byte[] bodyBytes = getBodyBytes(rpcRequest.getRequestPayload(),serializeType);
         // 魔术值 4B 内容: lrpc
         byteBuf.writeBytes(MessageFormatConstant.MAGIC);
         // 版本 1B 内容：1
@@ -42,7 +48,7 @@ public class RpcMessageEncoder extends MessageToByteEncoder<RpcRequest> {
         // 请求类型 1B
         byteBuf.writeByte(rpcRequest.getRequestType());
         // 序列化类型 1B
-        byteBuf.writeByte(rpcRequest.getSerializeType());
+        byteBuf.writeByte(serializeType);
         // 压缩类型 1B
         byteBuf.writeByte(rpcRequest.getCompressType());
         // 请求id 8B
@@ -51,26 +57,33 @@ public class RpcMessageEncoder extends MessageToByteEncoder<RpcRequest> {
         if(rpcRequest.getRequestType() != RequestType.HEART_BEAT.getId()) {
             byteBuf.writeBytes(bodyBytes);
         }
+        log.debug("请求【{}】已经在客户端完成编码",rpcRequest.getRequestId());
 
 
     }
 
-    private byte[] getBodyBytes(RequestPayload requestPayload) {
-        // 针对不同的消息类型作处理（心跳没有payload）
-        if (requestPayload == null) {
-            return new byte[0];
-        }
-        // object 序列化成字节数组
-        try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            ObjectOutputStream outputStream = new ObjectOutputStream(baos);
-            outputStream.writeObject(requestPayload);
-            // todo 压缩
-            return baos.toByteArray();
-        } catch (IOException e) {
-            log.error("序列化时发生异常,requestPayload:{}",requestPayload.toString());
-            throw new RuntimeException();
-        }
+
+
+
+    private byte[] getBodyBytes(RequestPayload requestPayload, byte serializeType) {
+
+        Serializer serializer = SerializerFactory.getSerializer(SerializerType.getNameByType(serializeType));
+        return serializer.serialize(requestPayload);
+
+//        // 针对不同的消息类型作处理（心跳没有payload）
+//        if (requestPayload == null) {
+//            return new byte[0];
+//        }
+//        // object 序列化成字节数组
+//        try {
+//            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+//            ObjectOutputStream outputStream = new ObjectOutputStream(baos);
+//            outputStream.writeObject(requestPayload);
+//            return baos.toByteArray();
+//        } catch (IOException e) {
+//            log.error("序列化时发生异常,requestPayload:{}",requestPayload.toString());
+//            throw new RuntimeException();
+//        }
 
     }
 

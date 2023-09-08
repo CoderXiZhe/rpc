@@ -1,24 +1,22 @@
 package com.xizhe;
 
 import com.xizhe.channelHandler.handler.MethodCallHandler;
-import com.xizhe.channelHandler.handler.RpcMessageDecoder;
+import com.xizhe.channelHandler.handler.RpcRequestDecoder;
+import com.xizhe.channelHandler.handler.RpcResponseEncoder;
 import com.xizhe.discovery.Registry;
 import com.xizhe.discovery.RegistryConfig;
+import com.xizhe.serialize.SerializerType;
+import com.xizhe.transport.message.RpcResponse;
+import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LoggingHandler;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.CharSet;
 
 import java.net.InetSocketAddress;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -53,6 +51,10 @@ public class RpcBootstrap {
     public static final Map<InetSocketAddress, Channel> CHANNEL_CACHE = new ConcurrentHashMap<>(16);
     // 维护一个对外挂起的completablefuture
     public static final Map<Long, CompletableFuture<Object>> PENDING_REQUEST = new ConcurrentHashMap<>(128);
+
+    public static final IdGenerator ID_GENERATOR = new IdGenerator(1,2);
+
+    public static byte SERIALIZE_TYPE;
     private RpcBootstrap() {
 
     }
@@ -135,8 +137,9 @@ public class RpcBootstrap {
                         protected void initChannel(SocketChannel socketChannel) throws Exception {
                             socketChannel.pipeline()
                                     .addLast(new LoggingHandler())
-                                    .addLast(new RpcMessageDecoder())
-                                    .addLast(new MethodCallHandler());
+                                    .addLast(new RpcRequestDecoder())
+                                    .addLast(new MethodCallHandler())
+                                    .addLast(new RpcResponseEncoder());
                         }
                     })
                     .localAddress(new InetSocketAddress(port));
@@ -164,4 +167,8 @@ public class RpcBootstrap {
     }
 
 
+    public RpcBootstrap serialize(SerializerType serializerType) {
+        RpcBootstrap.SERIALIZE_TYPE = serializerType.getType();
+        return this;
+    }
 }

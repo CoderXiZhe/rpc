@@ -2,6 +2,10 @@ package com.xizhe.channelHandler.handler;
 
 import com.xizhe.MessageFormatConstant;
 import com.xizhe.enumeration.RequestType;
+import com.xizhe.serialize.JdkSerializer;
+import com.xizhe.serialize.Serializer;
+import com.xizhe.serialize.SerializerFactory;
+import com.xizhe.serialize.SerializerType;
 import com.xizhe.transport.message.RequestPayload;
 import com.xizhe.transport.message.RpcRequest;
 import io.netty.buffer.ByteBuf;
@@ -21,8 +25,8 @@ import java.io.ObjectInputStream;
  */
 
 @Slf4j
-public class RpcMessageDecoder extends LengthFieldBasedFrameDecoder {
-    public RpcMessageDecoder() {
+public class RpcRequestDecoder extends LengthFieldBasedFrameDecoder {
+    public RpcRequestDecoder() {
         super(
                 // 最大帧的长度
                 MessageFormatConstant.MAX_FRAME_LENGTH,
@@ -93,17 +97,24 @@ public class RpcMessageDecoder extends LengthFieldBasedFrameDecoder {
         }
         // 10. 对body进行解压缩
 
-        // 11. 对body进行反序列化
-        try( ByteArrayInputStream bais = new ByteArrayInputStream(body);
-                ObjectInputStream ois = new ObjectInputStream(bais)
-        ) {
-            RequestPayload payload = (RequestPayload) ois.readObject();
-            request.setRequestPayload(payload);
-        } catch (IOException | ClassNotFoundException e) {
-            log.error("请求【{}】反序列化出现异常:",requestId,e);
-        }
 
+        // 11. 对body进行反序列化
+        Serializer serializer = SerializerFactory.getSerializer(SerializerType.getNameByType(serializeType));
+        RequestPayload payload = serializer.deserialize(body, RequestPayload.class);
+        request.setRequestPayload(payload);
+        log.debug("请求【{}】已经在服务端完成解码",request.getRequestId());
         return request;
+//        try( ByteArrayInputStream bais = new ByteArrayInputStream(body);
+//                ObjectInputStream ois = new ObjectInputStream(bais)
+//        ) {
+//            RequestPayload payload = (RequestPayload) ois.readObject();
+//            request.setRequestPayload(payload);
+//        } catch (IOException | ClassNotFoundException e) {
+//            log.error("请求【{}】反序列化出现异常:",requestId,e);
+//        }
+//
+//        log.debug("请求【{}】已经在服务端完成解码",request.getRequestId());
+//        return request;
 
     }
 }

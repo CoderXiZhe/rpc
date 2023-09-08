@@ -2,8 +2,10 @@ package com.xizhe.channelHandler.handler;
 
 import com.xizhe.RpcBootstrap;
 import com.xizhe.ServiceConfig;
+import com.xizhe.enumeration.ResponseCode;
 import com.xizhe.transport.message.RequestPayload;
 import com.xizhe.transport.message.RpcRequest;
+import com.xizhe.transport.message.RpcResponse;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import lombok.extern.slf4j.Slf4j;
@@ -25,9 +27,15 @@ public class MethodCallHandler extends SimpleChannelInboundHandler<RpcRequest> {
         RequestPayload requestPayload = rpcRequest.getRequestPayload();
         Object result = callTargetMethod(requestPayload);
         // 封装响应
-
+        RpcResponse response = RpcResponse.builder()
+                .body(result)
+                .compressType(rpcRequest.getCompressType())
+                .requestId(rpcRequest.getRequestId())
+                .serializeType(rpcRequest.getSerializeType())
+                .responseCode(ResponseCode.SUCCESS.getId())
+                .build();
         // 写出响应
-        channelHandlerContext.channel().writeAndFlush(result);
+        channelHandlerContext.channel().writeAndFlush(response);
     }
 
     private Object callTargetMethod(RequestPayload requestPayload) {

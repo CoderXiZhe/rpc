@@ -1,7 +1,8 @@
 package com.xizhe.channelHandler;
 
 import com.xizhe.channelHandler.handler.MySimpleChannelInboundHandler;
-import com.xizhe.channelHandler.handler.RpcMessageEncoder;
+import com.xizhe.channelHandler.handler.RpcRequestEncoder;
+import com.xizhe.channelHandler.handler.RpcResponseDecoder;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.logging.LogLevel;
@@ -21,8 +22,10 @@ public class ConsumerChannelInitializer extends ChannelInitializer<SocketChannel
                 // 出站 netty自带log
                 .addLast(new LoggingHandler(LogLevel.DEBUG))
                 // 出站 编码器
-                .addLast(new RpcMessageEncoder())
-                // 入站
+                .addLast(new RpcRequestEncoder())
+                // 入站解码器
+                .addLast(new RpcResponseDecoder())
+                // 处理结果
                 .addLast(new MySimpleChannelInboundHandler());
     }
 }

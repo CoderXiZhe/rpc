@@ -10,6 +10,7 @@ import com.xizhe.transport.message.RpcRequest;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
+import jdk.nashorn.internal.runtime.linker.Bootstrap;
 import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.InvocationHandler;
@@ -63,16 +64,16 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
                 .build();
 
         RpcRequest request = RpcRequest.builder()
-                .requestId(1L)
+                .requestId(RpcBootstrap.ID_GENERATOR.getId())
                 .requestType(RequestType.REQUEST.getId())
                 .compressType((byte) 1)
-                .serializeType((byte) 1)
+                .serializeType(RpcBootstrap.SERIALIZE_TYPE)
                 .requestPayload(requestPayload)
                 .build();
 
         CompletableFuture<Object> future = new CompletableFuture<>();
         // 将future暴露出去 等到服务端提供响应时候调用complete方法
-        RpcBootstrap.PENDING_REQUEST.put(1L,future);
+        RpcBootstrap.PENDING_REQUEST.put(request.getRequestId(),future);
         channel.writeAndFlush(request)
                 .addListener((ChannelFutureListener) promise -> {
             // 当数据已经写完 promise就结束了
