@@ -7,6 +7,7 @@ public enum ResponseCode {
 
     SUCCESS((byte) 1,"成功"),
     FAIL((byte)2 ,"失败");
+    //HEART_BEAT((byte) 3, "心跳");
 
     private byte code;
     private String type;

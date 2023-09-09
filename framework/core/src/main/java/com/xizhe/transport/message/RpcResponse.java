@@ -18,7 +18,7 @@ import java.io.Serializable;
 @ToString
 public class RpcResponse implements Serializable {
 
-    private long requestId;
+    private Long requestId;
 
     private byte compressType;
 
@@ -27,6 +27,8 @@ public class RpcResponse implements Serializable {
     private byte responseCode;
 
     private Object body;
+
+    private Long timestamp;
 
 
 }

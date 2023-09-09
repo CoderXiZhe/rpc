@@ -1,6 +1,9 @@
 package com.xizhe.channelHandler.handler;
 
 import com.xizhe.MessageFormatConstant;
+import com.xizhe.compress.CompressFactory;
+import com.xizhe.compress.CompressType;
+import com.xizhe.compress.Compressor;
 import com.xizhe.enumeration.RequestType;
 import com.xizhe.serialize.JdkSerializer;
 import com.xizhe.serialize.Serializer;
@@ -82,23 +85,28 @@ public class RpcResponseDecoder extends LengthFieldBasedFrameDecoder {
         byte compressType = byteBuf.readByte();
         // 8. 解析请求id
         long requestId = byteBuf.readLong();
+        long timestamp = byteBuf.readLong();
         // 9. 解析body
         byte[] body = new byte[fullLength - headerLength];
         byteBuf.readBytes(body);
+
 
         RpcResponse response = RpcResponse.builder()
                 .serializeType(serializeType)
                 .responseCode(responseCode)
                 .compressType(compressType)
                 .requestId(requestId)
+                .timestamp(timestamp)
                 .build();
 
         // todo 心跳响应
 
         // 10. 对body进行解压缩
+        Compressor compressor = CompressFactory.getCompressor(CompressType.getNameByType(compressType));
+        body = compressor.decompress(body);
+        log.debug("请求【{}】的响应已经在客户端使用[{}]完成解压缩",response.getRequestId(),CompressType.getNameByType(compressType));
 
         // 11. 对body进行反序列化
-
         Serializer serializer = SerializerFactory.getSerializer(SerializerType.getNameByType(serializeType));
         Object object = serializer.deserialize(body, Object.class);
         response.setBody(object);

@@ -1,6 +1,9 @@
 package com.xizhe.channelHandler.handler;
 
 import com.xizhe.MessageFormatConstant;
+import com.xizhe.compress.CompressFactory;
+import com.xizhe.compress.CompressType;
+import com.xizhe.compress.Compressor;
 import com.xizhe.enumeration.RequestType;
 import com.xizhe.serialize.JdkSerializer;
 import com.xizhe.serialize.Serializer;
@@ -35,8 +38,14 @@ public class RpcRequestEncoder extends MessageToByteEncoder<RpcRequest> {
     protected void encode(ChannelHandlerContext channelHandlerContext,
                           RpcRequest rpcRequest, ByteBuf byteBuf) throws Exception {
         byte serializeType = rpcRequest.getSerializeType();
+        byte compressType = rpcRequest.getCompressType();
         log.debug("请求【{}】使用[{}]序列化方式",rpcRequest.getRequestId(),SerializerType.getNameByType(serializeType));
         byte[] bodyBytes = getBodyBytes(rpcRequest.getRequestPayload(),serializeType);
+        int start = bodyBytes.length;
+        bodyBytes = compress(bodyBytes,compressType);
+        int end = bodyBytes.length;
+        log.debug("请求【{}】已经在客户端使用[{}]完成压缩,压缩前：[{}],压缩后：[{}]"
+                ,rpcRequest.getRequestId(),CompressType.getNameByType(compressType),start,end);
         // 魔术值 4B 内容: lrpc
         byteBuf.writeBytes(MessageFormatConstant.MAGIC);
         // 版本 1B 内容：1
@@ -54,16 +63,23 @@ public class RpcRequestEncoder extends MessageToByteEncoder<RpcRequest> {
         // 请求id 8B
         byteBuf.writeLong(rpcRequest.getRequestId());
         // body 不是心跳请求 才需要写body
+        byteBuf.writeLong(rpcRequest.getTimestamp());
         if(rpcRequest.getRequestType() != RequestType.HEART_BEAT.getId()) {
             byteBuf.writeBytes(bodyBytes);
         }
+
         log.debug("请求【{}】已经在客户端完成编码",rpcRequest.getRequestId());
+
+
 
 
     }
 
 
-
+    private byte[] compress(byte[] bodyBytes, byte compressType) {
+        Compressor compressor = CompressFactory.getCompressor(CompressType.getNameByType(compressType));
+        return compressor.compress(bodyBytes);
+    }
 
     private byte[] getBodyBytes(RequestPayload requestPayload, byte serializeType) {
 

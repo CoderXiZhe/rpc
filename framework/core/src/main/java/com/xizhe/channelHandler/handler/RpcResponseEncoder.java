@@ -1,6 +1,9 @@
 package com.xizhe.channelHandler.handler;
 
 import com.xizhe.MessageFormatConstant;
+import com.xizhe.compress.CompressFactory;
+import com.xizhe.compress.CompressType;
+import com.xizhe.compress.Compressor;
 import com.xizhe.enumeration.RequestType;
 import com.xizhe.serialize.JdkSerializer;
 import com.xizhe.serialize.Serializer;
@@ -36,7 +39,13 @@ public class RpcResponseEncoder extends MessageToByteEncoder<RpcResponse> {
     protected void encode(ChannelHandlerContext channelHandlerContext,
                           RpcResponse rpcResponse, ByteBuf byteBuf) throws Exception {
         byte serializeType = rpcResponse.getSerializeType();
+        byte compressType = rpcResponse.getCompressType();
         byte[] bodyBytes = getBodyBytes(rpcResponse.getBody(),serializeType);
+        int start = bodyBytes.length;
+        bodyBytes = compress(bodyBytes,compressType);
+        int end = bodyBytes.length;
+        log.debug("请求【{}】已经在服务端使用[{}]完成压缩,压缩前:[{}],压缩后:[{}]"
+                ,rpcResponse.getRequestId(),CompressType.getNameByType(compressType),start,end);
         // 魔术值 4B 内容: lrpc
         byteBuf.writeBytes(MessageFormatConstant.MAGIC);
         // 版本 1B 内容：1
@@ -53,13 +62,14 @@ public class RpcResponseEncoder extends MessageToByteEncoder<RpcResponse> {
         byteBuf.writeByte(rpcResponse.getCompressType());
         // 请求id 8B
         byteBuf.writeLong(rpcResponse.getRequestId());
+        byteBuf.writeLong(rpcResponse.getTimestamp());
+
         // body 不是null 才写
         if(rpcResponse.getBody() != null) {
             byteBuf.writeBytes(bodyBytes);
         }
 
         log.debug("请求【{}】的响应已在服务端完成编码",rpcResponse.getRequestId());
-
 
     }
 
@@ -83,6 +93,10 @@ public class RpcResponseEncoder extends MessageToByteEncoder<RpcResponse> {
 //            throw new RuntimeException();
 //        }
 
+    }
+    private byte[] compress(byte[] bodyBytes, byte compressType) {
+        Compressor compressor = CompressFactory.getCompressor(CompressType.getNameByType(compressType));
+        return compressor.compress(bodyBytes);
     }
 
 

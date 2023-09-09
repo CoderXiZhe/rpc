@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -48,13 +49,9 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
         log.info("method --> {}",method.getName());
         log.info("args --> {}",args);
 
-        // 1. 发现服务 从注册中心寻找一个可用服务
-        InetSocketAddress address = registry.discovery(interfaceRef.getName());
-        log.debug("consumer发现服务【{}】可用主机:{}",interfaceRef.getName(),address);
-        // 2. 获取可用channel
-        Channel channel = getAvailableChannel(address);
-        log.debug("获取了与【{}】建立的连接通道,准备发送数据",address.toString());
-        // 3. 封装报文
+
+
+        // 封装报文
         RequestPayload requestPayload = RequestPayload.builder()
                 .interfaceName(interfaceRef.getName())
                 .method(method.getName())
@@ -66,10 +63,22 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
         RpcRequest request = RpcRequest.builder()
                 .requestId(RpcBootstrap.ID_GENERATOR.getId())
                 .requestType(RequestType.REQUEST.getId())
-                .compressType((byte) 1)
+                .compressType(RpcBootstrap.COMPRESS_TYPE)
                 .serializeType(RpcBootstrap.SERIALIZE_TYPE)
                 .requestPayload(requestPayload)
+                .timestamp(System.currentTimeMillis())
                 .build();
+
+        RpcBootstrap.REQUEST_THREAD_LOCAL.set(request);
+
+        // 负载均衡  从服务列表寻找一个可用服务
+        InetSocketAddress address = RpcBootstrap.LOAD_BALANCER
+                .selectServiceAddress(interfaceRef.getName());
+        log.debug("consumer发现服务【{}】可用主机:{}",interfaceRef.getName(),address);
+
+        // 获取可用channel
+        Channel channel = getAvailableChannel(address);
+        log.debug("获取了与【{}】建立的连接通道,准备发送数据",address.toString());
 
         CompletableFuture<Object> future = new CompletableFuture<>();
         // 将future暴露出去 等到服务端提供响应时候调用complete方法
@@ -82,6 +91,8 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
                 future.completeExceptionally(promise.cause());
             }
         });
+        RpcBootstrap.REQUEST_THREAD_LOCAL.remove();
+
         // 阻塞获取服务端提供的响应
         return future.get(10,TimeUnit.SECONDS);
     }

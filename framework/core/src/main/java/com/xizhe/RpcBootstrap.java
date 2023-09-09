@@ -3,11 +3,15 @@ package com.xizhe;
 import com.xizhe.channelHandler.handler.MethodCallHandler;
 import com.xizhe.channelHandler.handler.RpcRequestDecoder;
 import com.xizhe.channelHandler.handler.RpcResponseEncoder;
+import com.xizhe.compress.CompressType;
 import com.xizhe.discovery.Registry;
 import com.xizhe.discovery.RegistryConfig;
+import com.xizhe.heartbeat.HeartBeatDetector;
+import com.xizhe.loadbalance.LoadBalancer;
+import com.xizhe.loadbalance.impl.MinimumRespTimeLoadBalancer;
+import com.xizhe.loadbalance.impl.RoundRobinLoadBalancer;
 import com.xizhe.serialize.SerializerType;
-import com.xizhe.transport.message.RpcResponse;
-import io.netty.bootstrap.Bootstrap;
+import com.xizhe.transport.message.RpcRequest;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -19,6 +23,8 @@ import lombok.extern.slf4j.Slf4j;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -49,12 +55,23 @@ public class RpcBootstrap {
     public static final Map<String,ServiceConfig<?>> SERVER_LIST = new ConcurrentHashMap<>(16);
     // 维护一个Channel缓存, InetSocketAddress作为key需要重写equals和hashcode
     public static final Map<InetSocketAddress, Channel> CHANNEL_CACHE = new ConcurrentHashMap<>(16);
+
+    public static final SortedMap<Long,Channel> ANSWER_TIME_CACHE = new TreeMap<>();
     // 维护一个对外挂起的completablefuture
     public static final Map<Long, CompletableFuture<Object>> PENDING_REQUEST = new ConcurrentHashMap<>(128);
-
+    // id生成器
     public static final IdGenerator ID_GENERATOR = new IdGenerator(1,2);
+    // 默认使用jdk方式进行序列化
+    public static byte SERIALIZE_TYPE = SerializerType.JDK.getType();
+    // 默认使用gzip进行压缩
+    public static byte COMPRESS_TYPE = CompressType.GZIP.getType();
 
-    public static byte SERIALIZE_TYPE;
+    public static LoadBalancer LOAD_BALANCER;
+
+    public static ThreadLocal<RpcRequest> REQUEST_THREAD_LOCAL = new ThreadLocal<>();
+
+
+
     private RpcBootstrap() {
 
     }
@@ -83,6 +100,7 @@ public class RpcBootstrap {
         this.registryConfig = registryConfig;
         // 通过registryConfig 获取注册中心 : 工厂模式
         this.registry = registryConfig.getRegistry();
+        RpcBootstrap.LOAD_BALANCER = new RoundRobinLoadBalancer();
         return this;
     }
 
@@ -163,12 +181,23 @@ public class RpcBootstrap {
      */
     public RpcBootstrap reference(ReferenceConfig<?> reference) {
         reference.setRegistryConfig(registryConfig);
+        // 开启对该服务的心跳检测
+        HeartBeatDetector.detectHeartBeat(reference.getInterface().getName());
         return this;
     }
 
 
     public RpcBootstrap serialize(SerializerType serializerType) {
         RpcBootstrap.SERIALIZE_TYPE = serializerType.getType();
+        return this;
+    }
+
+    public Registry getRegistry() {
+        return registry;
+    }
+
+    public RpcBootstrap compress(CompressType gzip) {
+        RpcBootstrap.COMPRESS_TYPE = gzip.getType();
         return this;
     }
 }

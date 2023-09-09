@@ -43,4 +43,6 @@ public class RpcRequest {
      */
     private RequestPayload requestPayload;
 
+    private Long timestamp;
+
 }

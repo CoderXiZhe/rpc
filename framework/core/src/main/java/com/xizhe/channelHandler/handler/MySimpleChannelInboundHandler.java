@@ -22,8 +22,15 @@ public class MySimpleChannelInboundHandler extends SimpleChannelInboundHandler<R
     @Override
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, RpcResponse response) throws Exception {
         // 服务端响应的结果
-        log.debug("客户端收到响应:{}", response.getBody());
+        Object body = response.getBody();
         CompletableFuture<Object> future = RpcBootstrap.PENDING_REQUEST.get(response.getRequestId());
-        future.complete(response.getBody());
+        if(body == null) {
+            // 心跳请求
+           future.complete(response.getTimestamp());
+        }else {
+            log.debug("客户端收到响应:{}", body);
+            future.complete(body);
+        }
+
     }
 }

@@ -56,7 +56,7 @@ public class ZookeeperRegistry extends AbstractRegistry {
     }
 
     @Override
-    public InetSocketAddress discovery(String serviceName) {
+    public List<InetSocketAddress> discovery(String serviceName) {
         // 1. 找到对应服务的节点
         String serviceNode = Constant.BASE_PROVIDERS_PATH + "/" + serviceName;
         // 2. 获取该节点的子节点
@@ -68,12 +68,13 @@ public class ZookeeperRegistry extends AbstractRegistry {
             Integer port = Integer.valueOf(hostAndPort[1]);
             return new InetSocketAddress(host, port);
         }).collect(Collectors.toList());
+
         if(collect.size() == 0) {
             throw new NetWorkException("未发现可用服务！");
         }
         // todo 每次调用不需要都去注册中心拉取 : 本地缓存 + watcher
         //      合理选择一个可用服务 ： 负载均衡
 
-        return collect.get(0);
+        return collect;
     }
 }

@@ -1,7 +1,11 @@
 package com.xizhe;
 
+import com.xizhe.compress.CompressType;
 import com.xizhe.discovery.RegistryConfig;
+import com.xizhe.heartbeat.HeartBeatDetector;
 import com.xizhe.serialize.SerializerType;
+
+import java.util.Map;
 
 /**
  * @author admin
@@ -24,11 +28,14 @@ public class Application {
                 .application("first-rpc-consumer")
                 .registry(new RegistryConfig("zookeeper://127.0.0.1:2181"))
                 .serialize(SerializerType.HESSIAN)
+                .compress(CompressType.GZIP)
                 .reference(reference);
 
         HelloRpc proxy = reference.get();
         String result = proxy.sayHello("rpc");
         System.out.println(result);
+
+
 
 
     }

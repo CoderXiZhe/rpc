@@ -15,7 +15,7 @@ public class MessageFormatConstant {
 
     public static final int VERSION_LENGTH = 1;
 
-    public static final short HEADER_LENGTH = (short) (MAGIC.length + 18);
+    public static final short HEADER_LENGTH = (short) (MAGIC.length + 18 + 8);
 
     public static final int HEADER_FIELD_LENGTH = 2;
 

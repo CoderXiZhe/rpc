@@ -1,6 +1,9 @@
 package com.xizhe.channelHandler.handler;
 
 import com.xizhe.MessageFormatConstant;
+import com.xizhe.compress.CompressFactory;
+import com.xizhe.compress.CompressType;
+import com.xizhe.compress.Compressor;
 import com.xizhe.enumeration.RequestType;
 import com.xizhe.serialize.JdkSerializer;
 import com.xizhe.serialize.Serializer;
@@ -16,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.util.Random;
 
 /**
  * @author admin
@@ -44,6 +48,8 @@ public class RpcRequestDecoder extends LengthFieldBasedFrameDecoder {
 
     @Override
     protected Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+
+        Thread.sleep(new Random().nextInt(50));
         Object decode = super.decode(ctx, in);
         if(decode instanceof ByteBuf ) {
             ByteBuf byteBuf = (ByteBuf) decode;
@@ -81,22 +87,29 @@ public class RpcRequestDecoder extends LengthFieldBasedFrameDecoder {
         byte compressType = byteBuf.readByte();
         // 8. 解析请求id
         Long requestId = byteBuf.readLong();
+
+        long timestamp = byteBuf.readLong();
         // 9. 解析body
         byte[] body = new byte[fullLength - headerLength];
         byteBuf.readBytes(body);
+
+
 
         RpcRequest request = RpcRequest.builder()
                 .serializeType(serializeType)
                 .requestType(requestType)
                 .compressType(compressType)
                 .requestId(requestId)
+                .timestamp(timestamp)
                 .build();
         // 心跳请求没有负载
         if(request.getRequestType() == RequestType.HEART_BEAT.getId()) {
             return request;
         }
         // 10. 对body进行解压缩
-
+        Compressor compressor = CompressFactory.getCompressor(CompressType.getNameByType(compressType));
+        body = compressor.decompress(body);
+        log.debug("请求【{}】已经在服务端使用[{}]完成解压缩",request.getRequestId(),CompressType.getNameByType(compressType));
 
         // 11. 对body进行反序列化
         Serializer serializer = SerializerFactory.getSerializer(SerializerType.getNameByType(serializeType));
@@ -117,4 +130,5 @@ public class RpcRequestDecoder extends LengthFieldBasedFrameDecoder {
 //        return request;
 
     }
+
 }

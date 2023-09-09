@@ -2,6 +2,7 @@ package com.xizhe.channelHandler.handler;
 
 import com.xizhe.RpcBootstrap;
 import com.xizhe.ServiceConfig;
+import com.xizhe.enumeration.RequestType;
 import com.xizhe.enumeration.ResponseCode;
 import com.xizhe.transport.message.RequestPayload;
 import com.xizhe.transport.message.RpcRequest;
@@ -24,16 +25,22 @@ import java.lang.reflect.Method;
 public class MethodCallHandler extends SimpleChannelInboundHandler<RpcRequest> {
     @Override
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, RpcRequest rpcRequest) throws Exception {
-        RequestPayload requestPayload = rpcRequest.getRequestPayload();
-        Object result = callTargetMethod(requestPayload);
         // 封装响应
         RpcResponse response = RpcResponse.builder()
-                .body(result)
                 .compressType(rpcRequest.getCompressType())
                 .requestId(rpcRequest.getRequestId())
                 .serializeType(rpcRequest.getSerializeType())
                 .responseCode(ResponseCode.SUCCESS.getId())
+                .timestamp(System.currentTimeMillis())
                 .build();
+        if(rpcRequest.getRequestType() == RequestType.HEART_BEAT.getId()) {
+            // 心跳类型 直接写回
+            channelHandlerContext.channel().writeAndFlush(response);
+            return;
+        }
+        RequestPayload requestPayload = rpcRequest.getRequestPayload();
+        Object result = callTargetMethod(requestPayload);
+        response.setBody(result);
         // 写出响应
         channelHandlerContext.channel().writeAndFlush(response);
     }
