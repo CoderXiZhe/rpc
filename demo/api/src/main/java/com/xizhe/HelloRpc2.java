@@ -1,7 +1,5 @@
 package com.xizhe;
 
-import com.xizhe.annotation.RpcApi;
-
 /**
  * @author admin
  * @version 1.0
@@ -10,7 +8,7 @@ import com.xizhe.annotation.RpcApi;
  */
 
 
-public interface HelloRpc {
+public interface HelloRpc2 {
 
     /**
      * 通用接口, client和server都需要依赖

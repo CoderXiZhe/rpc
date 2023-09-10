@@ -2,6 +2,7 @@ package com.xizhe;
 
 import com.xizhe.discovery.RegistryConfig;
 import com.xizhe.impl.HelloRpcImpl;
+import com.xizhe.loadbalance.impl.RoundRobinLoadBalancer;
 
 /**
  * @author admin
@@ -29,7 +30,9 @@ public class Application {
                 .registry(new RegistryConfig("zookeeper://127.0.0.1:2181"))
                 .protocol(new ProtocolConfig("jdk"))
                 // 发布服务
-                .publish(service)
+                // .publish(service)
+                .scan("com.xizhe")
+                .loadBalance(new RoundRobinLoadBalancer())
                 // 启动服务
                 .start();
     }

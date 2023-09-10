@@ -109,13 +109,16 @@ public class RpcRequestDecoder extends LengthFieldBasedFrameDecoder {
         // 10. 对body进行解压缩
         Compressor compressor = CompressFactory.getCompressor(CompressType.getNameByType(compressType));
         body = compressor.decompress(body);
-        log.debug("请求【{}】已经在服务端使用[{}]完成解压缩",request.getRequestId(),CompressType.getNameByType(compressType));
-
+        if(request.getRequestType() != RequestType.HEART_BEAT.getId()) {
+            log.debug("请求【{}】已经在服务端使用[{}]完成解压缩", request.getRequestId(), CompressType.getNameByType(compressType));
+        }
         // 11. 对body进行反序列化
         Serializer serializer = SerializerFactory.getSerializer(SerializerType.getNameByType(serializeType));
         RequestPayload payload = serializer.deserialize(body, RequestPayload.class);
         request.setRequestPayload(payload);
-        log.debug("请求【{}】已经在服务端完成解码",request.getRequestId());
+        if(request.getRequestType() != RequestType.HEART_BEAT.getId()) {
+            log.debug("请求【{}】已经在服务端完成解码", request.getRequestId());
+        }
         return request;
 //        try( ByteArrayInputStream bais = new ByteArrayInputStream(body);
 //                ObjectInputStream ois = new ObjectInputStream(bais)

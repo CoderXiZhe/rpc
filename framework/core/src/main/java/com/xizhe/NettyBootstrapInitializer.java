@@ -1,4 +1,4 @@
-package com.xizhe.discovery;
+package com.xizhe;
 
 
 import com.xizhe.channelHandler.ConsumerChannelInitializer;

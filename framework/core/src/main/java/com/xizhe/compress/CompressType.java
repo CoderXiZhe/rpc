@@ -32,4 +32,14 @@ public enum CompressType {
         throw new RuntimeException("获取压缩器出现异常,不存在对应压缩器!");
     }
 
+    public static byte getTypeByName(String name) {
+        CompressType[] values = CompressType.values();
+        for (CompressType value : values) {
+            if(name.equals(value.name)) {
+                return value.getType();
+            }
+        }
+        throw new RuntimeException("获取压缩器出现异常,不存在对应压缩器!");
+    }
+
 }

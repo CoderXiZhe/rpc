@@ -1,5 +1,6 @@
 package com.xizhe;
 
+import com.xizhe.annotation.RpcApi;
 import com.xizhe.channelHandler.handler.MethodCallHandler;
 import com.xizhe.channelHandler.handler.RpcRequestDecoder;
 import com.xizhe.channelHandler.handler.RpcResponseEncoder;
@@ -20,13 +21,15 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LoggingHandler;
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.File;
+import java.io.FileFilter;
+import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
-import java.util.List;
-import java.util.Map;
-import java.util.SortedMap;
-import java.util.TreeMap;
+import java.net.URL;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * @author admin
@@ -40,17 +43,7 @@ public class RpcBootstrap {
 
     private static final RpcBootstrap instance = new RpcBootstrap();
 
-    private String appName;
-
-    private ProtocolConfig protocolConfig;
-
-    private RegistryConfig registryConfig;
-
-    private int port = 8099;
-
-    // 维护一个zk实例
-    private Registry registry ;
-
+    private Configuration configuration;
     // 维护一个已经发布的服务列表 key: interface的全限定名 value:serviceConfig
     public static final Map<String,ServiceConfig<?>> SERVER_LIST = new ConcurrentHashMap<>(16);
     // 维护一个Channel缓存, InetSocketAddress作为key需要重写equals和hashcode
@@ -59,21 +52,13 @@ public class RpcBootstrap {
     public static final SortedMap<Long,Channel> ANSWER_TIME_CACHE = new TreeMap<>();
     // 维护一个对外挂起的completablefuture
     public static final Map<Long, CompletableFuture<Object>> PENDING_REQUEST = new ConcurrentHashMap<>(128);
-    // id生成器
-    public static final IdGenerator ID_GENERATOR = new IdGenerator(1,2);
-    // 默认使用jdk方式进行序列化
-    public static byte SERIALIZE_TYPE = SerializerType.JDK.getType();
-    // 默认使用gzip进行压缩
-    public static byte COMPRESS_TYPE = CompressType.GZIP.getType();
-
-    public static LoadBalancer LOAD_BALANCER;
 
     public static ThreadLocal<RpcRequest> REQUEST_THREAD_LOCAL = new ThreadLocal<>();
 
 
 
     private RpcBootstrap() {
-
+        configuration = new Configuration();
     }
 
     public static RpcBootstrap getInstance() {
@@ -87,7 +72,7 @@ public class RpcBootstrap {
      */
 
     public RpcBootstrap application(String appName) {
-        this.appName = appName;
+        this.configuration.setAppName(appName);
         return this;
     }
 
@@ -97,10 +82,18 @@ public class RpcBootstrap {
      * @return
      */
     public RpcBootstrap registry(RegistryConfig registryConfig) {
-        this.registryConfig = registryConfig;
+        this.configuration.setRegistryConfig(registryConfig);
         // 通过registryConfig 获取注册中心 : 工厂模式
-        this.registry = registryConfig.getRegistry();
-        RpcBootstrap.LOAD_BALANCER = new RoundRobinLoadBalancer();
+        return this;
+    }
+
+    /**
+     *  配置一个负载均衡器
+     * @param loadBalancer 负载均衡器
+     * @return
+     */
+    public RpcBootstrap loadBalance(LoadBalancer loadBalancer) {
+        this.configuration.setLoadBalancer(loadBalancer);
         return this;
     }
 
@@ -110,7 +103,7 @@ public class RpcBootstrap {
      * @return
      */
     public RpcBootstrap protocol(ProtocolConfig protocolConfig) {
-        this.protocolConfig = protocolConfig;
+        this.configuration.setProtocolConfig(protocolConfig);
         log.debug("当前工程使用了: {} 协议进行序列化",protocolConfig.getProtocolName());
         return this;
     }
@@ -122,7 +115,7 @@ public class RpcBootstrap {
      */
     public RpcBootstrap publish(ServiceConfig<?> service) {
         // 面相抽象编程
-        registry.registry(service);
+        this.configuration.getRegistryConfig().getRegistry().registry(service);
         SERVER_LIST.put(service.getInterface().getName(),service);
         return this;
     }
@@ -160,9 +153,9 @@ public class RpcBootstrap {
                                     .addLast(new RpcResponseEncoder());
                         }
                     })
-                    .localAddress(new InetSocketAddress(port));
+                    .localAddress(new InetSocketAddress(Constant.port));
             // 4. 绑定端口
-            ChannelFuture channelFuture = serverBootstrap.bind(port).sync();
+            ChannelFuture channelFuture = serverBootstrap.bind(Constant.port).sync();
             channelFuture.channel().closeFuture().sync();
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -180,7 +173,7 @@ public class RpcBootstrap {
      * ------------------------------------ 服务调用方api --------------------------------------------------
      */
     public RpcBootstrap reference(ReferenceConfig<?> reference) {
-        reference.setRegistryConfig(registryConfig);
+        reference.setRegistryConfig(this.configuration.getRegistryConfig());
         // 开启对该服务的心跳检测
         HeartBeatDetector.detectHeartBeat(reference.getInterface().getName());
         return this;
@@ -188,16 +181,103 @@ public class RpcBootstrap {
 
 
     public RpcBootstrap serialize(SerializerType serializerType) {
-        RpcBootstrap.SERIALIZE_TYPE = serializerType.getType();
+        this.configuration.setSerializeType(serializerType.getType());
         return this;
     }
 
     public Registry getRegistry() {
-        return registry;
+        return this.configuration.getRegistryConfig().getRegistry();
     }
 
     public RpcBootstrap compress(CompressType gzip) {
-        RpcBootstrap.COMPRESS_TYPE = gzip.getType();
+        this.configuration.setCompressType(gzip.getType());
         return this;
+    }
+
+    public RpcBootstrap scan(String packageName) {
+        // 获取通过packageName得到其下的所有类的全限定名
+        List<String> names = getAllClassName(packageName);
+        // 通过反射获取目标接口，构建具体实现
+        List<? extends Class<?>> classes = names.stream().map(name -> {
+            try {
+                return Class.forName(name);
+            } catch (ClassNotFoundException e) {
+                throw new RuntimeException(e);
+            }
+        }).filter(clazz -> clazz.getAnnotation(RpcApi.class) != null).collect(Collectors.toList());
+        for (Class<?> clazz : classes) {
+            Class<?>[] interfaces = clazz.getInterfaces();
+            Object instance = null;
+            try {
+                 instance = clazz.getConstructor().newInstance();
+            } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+                throw new RuntimeException(e);
+            }
+            List<ServiceConfig<?>> serviceConfigs = new ArrayList<>();
+            for (Class<?> anInterface : interfaces) {
+                ServiceConfig<Object> serviceConfig = new ServiceConfig();
+                serviceConfig.setInterface(anInterface);
+                serviceConfig.setRef(instance);
+                serviceConfigs.add(serviceConfig);
+                publish(serviceConfig);
+                log.debug("【{}】已通过包扫描进行发布",anInterface);
+            }
+        }
+
+        return this;
+    }
+
+    private List<String> getAllClassName(String packageName) {
+        String basePath = packageName.replaceAll("\\.","/");
+        System.out.println(basePath);
+        URL resource = ClassLoader.getSystemClassLoader().getResource(basePath);
+        if (resource == null) {
+            throw new RuntimeException();
+        }
+        String absolutePath = resource.getPath();
+        System.out.println(absolutePath);
+        List<String> classNames = new ArrayList<>();
+        classNames = recursionFile(absolutePath,classNames);
+        return classNames;
+    }
+
+    private List<String> recursionFile(String absolutePath, List<String> classNames) {
+        File file = new File(absolutePath);
+        if(file.isDirectory()) {
+            File[] children = file.listFiles(pathname -> pathname.isDirectory() || pathname.getPath().contains(".class"));
+            if (children == null || children.length == 0) {
+                return classNames;
+            }
+            for (File child : children) {
+                if(child.isDirectory()) {
+                    recursionFile(child.getAbsolutePath(),classNames);
+                }else {
+                    String className = getClassNameByAbsolutePath(child.getAbsolutePath());
+                    classNames.add(className);
+                }
+            }
+        }else {
+            String className = getClassNameByAbsolutePath(absolutePath);
+            classNames.add(className);
+        }
+        return classNames;
+    }
+
+    private String getClassNameByAbsolutePath(String absolutePath) {
+        // D:\Java-course\rpc\framework\core\target\classes\com\xizhe\watch\UpAndDownWatcher.class
+        // -> com\xizhe\watch\UpAndDownWatcher.class
+        // -> com.xizhe.watch.UpAndDownWatcher
+        String[] split = absolutePath.split("classes\\\\");
+        String path = split[split.length - 1];
+        String[] split1 = path.replaceAll("\\\\", ".").split("\\.class");
+        return split1[split1.length -1];
+    }
+
+    public static void main(String[] args) {
+        RpcBootstrap.getInstance().getAllClassName("com.xizhe");
+    }
+
+    public Configuration getConfiguration() {
+        return configuration;
     }
 }

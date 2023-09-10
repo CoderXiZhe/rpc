@@ -1,22 +1,19 @@
 package com.xizhe.proxy.handler;
 
 import com.xizhe.RpcBootstrap;
-import com.xizhe.discovery.NettyBootstrapInitializer;
+import com.xizhe.NettyBootstrapInitializer;
 import com.xizhe.discovery.Registry;
 import com.xizhe.enumeration.RequestType;
 import com.xizhe.excptions.NetWorkException;
 import com.xizhe.transport.message.RequestPayload;
 import com.xizhe.transport.message.RpcRequest;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
-import jdk.nashorn.internal.runtime.linker.Bootstrap;
 import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -49,8 +46,6 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
         log.info("method --> {}",method.getName());
         log.info("args --> {}",args);
 
-
-
         // 封装报文
         RequestPayload requestPayload = RequestPayload.builder()
                 .interfaceName(interfaceRef.getName())
@@ -61,10 +56,10 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
                 .build();
 
         RpcRequest request = RpcRequest.builder()
-                .requestId(RpcBootstrap.ID_GENERATOR.getId())
+                .requestId(RpcBootstrap.getInstance().getConfiguration().getIdGenerator().getId())
                 .requestType(RequestType.REQUEST.getId())
-                .compressType(RpcBootstrap.COMPRESS_TYPE)
-                .serializeType(RpcBootstrap.SERIALIZE_TYPE)
+                .compressType(RpcBootstrap.getInstance().getConfiguration().getCompressType())
+                .serializeType(RpcBootstrap.getInstance().getConfiguration().getSerializeType())
                 .requestPayload(requestPayload)
                 .timestamp(System.currentTimeMillis())
                 .build();
@@ -72,7 +67,8 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
         RpcBootstrap.REQUEST_THREAD_LOCAL.set(request);
 
         // 负载均衡  从服务列表寻找一个可用服务
-        InetSocketAddress address = RpcBootstrap.LOAD_BALANCER
+        Thread.sleep(1000);
+        InetSocketAddress address = RpcBootstrap.getInstance().getConfiguration().getLoadBalancer()
                 .selectServiceAddress(interfaceRef.getName());
         log.debug("consumer发现服务【{}】可用主机:{}",interfaceRef.getName(),address);
 

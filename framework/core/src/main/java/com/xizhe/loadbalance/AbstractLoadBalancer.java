@@ -23,7 +23,12 @@ public abstract class AbstractLoadBalancer implements LoadBalancer{
 
 
     public AbstractLoadBalancer() {
-        this.registry = RpcBootstrap.getInstance().getRegistry();
+
+    }
+
+    @Override
+    public void reBalance(String serviceName, List<InetSocketAddress> addressList) {
+        selectorCache.put(serviceName,getSelector(addressList,serviceName));
     }
 
     /**
@@ -33,6 +38,7 @@ public abstract class AbstractLoadBalancer implements LoadBalancer{
      */
     @Override
     public InetSocketAddress selectServiceAddress(String serviceName) {
+        this.registry = RpcBootstrap.getInstance().getConfiguration().getRegistryConfig().getRegistry();
         Selector selector = selectorCache.get(serviceName);
         if (selector == null) {
             selector = getSelector(registry.discovery(serviceName),serviceName);

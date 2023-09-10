@@ -14,6 +14,17 @@ public enum SerializerType {
         this.name = name;
     }
 
+    public static byte getTypeByName(String compressName) {
+        SerializerType[] values = SerializerType.values();
+        for (SerializerType value : values) {
+            if(compressName.equals(value.name)) {
+                return value.getType();
+            }
+        }
+        throw new RuntimeException("获取序列化器出现异常,不存在对应序列化器!");
+    }
+
+
     public byte getType() {
         return type;
     }

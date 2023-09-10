@@ -3,6 +3,7 @@ package com.xizhe;
 import com.xizhe.compress.CompressType;
 import com.xizhe.discovery.RegistryConfig;
 import com.xizhe.heartbeat.HeartBeatDetector;
+import com.xizhe.loadbalance.impl.RoundRobinLoadBalancer;
 import com.xizhe.serialize.SerializerType;
 
 import java.util.Map;
@@ -29,6 +30,7 @@ public class Application {
                 .registry(new RegistryConfig("zookeeper://127.0.0.1:2181"))
                 .serialize(SerializerType.HESSIAN)
                 .compress(CompressType.GZIP)
+                .loadBalance(new RoundRobinLoadBalancer())
                 .reference(reference);
 
         HelloRpc proxy = reference.get();

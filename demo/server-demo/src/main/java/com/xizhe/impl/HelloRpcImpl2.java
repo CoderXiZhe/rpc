@@ -1,6 +1,6 @@
 package com.xizhe.impl;
 
-import com.xizhe.HelloRpc;
+import com.xizhe.HelloRpc2;
 import com.xizhe.annotation.RpcApi;
 
 /**
@@ -10,7 +10,7 @@ import com.xizhe.annotation.RpcApi;
  * @date 2023/9/4 15:35
  */
 @RpcApi
-public class HelloRpcImpl implements HelloRpc {
+public class HelloRpcImpl2 implements HelloRpc2 {
 
     @Override
     public String sayHello(String msg) {

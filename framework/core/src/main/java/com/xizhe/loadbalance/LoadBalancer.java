@@ -1,6 +1,7 @@
 package com.xizhe.loadbalance;
 
 import java.net.InetSocketAddress;
+import java.util.List;
 
 /**
  * @author admin
@@ -15,4 +16,6 @@ public interface LoadBalancer {
      * @param serviceName 服务名
      */
     InetSocketAddress selectServiceAddress(String serviceName);
+
+    void reBalance(String serviceName, List<InetSocketAddress> addressList);
 }

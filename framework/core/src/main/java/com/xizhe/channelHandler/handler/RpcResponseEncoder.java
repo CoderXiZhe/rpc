@@ -44,8 +44,10 @@ public class RpcResponseEncoder extends MessageToByteEncoder<RpcResponse> {
         int start = bodyBytes.length;
         bodyBytes = compress(bodyBytes,compressType);
         int end = bodyBytes.length;
-        log.debug("请求【{}】已经在服务端使用[{}]完成压缩,压缩前:[{}],压缩后:[{}]"
-                ,rpcResponse.getRequestId(),CompressType.getNameByType(compressType),start,end);
+        if(bodyBytes.length != 0) {
+            log.debug("请求【{}】已经在服务端使用[{}]完成压缩,压缩前:[{}],压缩后:[{}]"
+                    , rpcResponse.getRequestId(), CompressType.getNameByType(compressType), start, end);
+        }
         // 魔术值 4B 内容: lrpc
         byteBuf.writeBytes(MessageFormatConstant.MAGIC);
         // 版本 1B 内容：1
@@ -68,8 +70,9 @@ public class RpcResponseEncoder extends MessageToByteEncoder<RpcResponse> {
         if(rpcResponse.getBody() != null) {
             byteBuf.writeBytes(bodyBytes);
         }
-
-        log.debug("请求【{}】的响应已在服务端完成编码",rpcResponse.getRequestId());
+        if(bodyBytes.length != 0) {
+            log.debug("请求【{}】的响应已在服务端完成编码", rpcResponse.getRequestId());
+        }
 
     }
 

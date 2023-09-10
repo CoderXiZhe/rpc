@@ -39,13 +39,17 @@ public class RpcRequestEncoder extends MessageToByteEncoder<RpcRequest> {
                           RpcRequest rpcRequest, ByteBuf byteBuf) throws Exception {
         byte serializeType = rpcRequest.getSerializeType();
         byte compressType = rpcRequest.getCompressType();
-        log.debug("请求【{}】使用[{}]序列化方式",rpcRequest.getRequestId(),SerializerType.getNameByType(serializeType));
+        if(rpcRequest.getRequestType() != RequestType.HEART_BEAT.getId()) {
+            log.debug("请求【{}】使用[{}]序列化方式", rpcRequest.getRequestId(), SerializerType.getNameByType(serializeType));
+        }
         byte[] bodyBytes = getBodyBytes(rpcRequest.getRequestPayload(),serializeType);
         int start = bodyBytes.length;
         bodyBytes = compress(bodyBytes,compressType);
         int end = bodyBytes.length;
-        log.debug("请求【{}】已经在客户端使用[{}]完成压缩,压缩前：[{}],压缩后：[{}]"
-                ,rpcRequest.getRequestId(),CompressType.getNameByType(compressType),start,end);
+        if(rpcRequest.getRequestType() != RequestType.HEART_BEAT.getId()) {
+            log.debug("请求【{}】已经在客户端使用[{}]完成压缩,压缩前：[{}],压缩后：[{}]"
+                    , rpcRequest.getRequestId(), CompressType.getNameByType(compressType), start, end);
+        }
         // 魔术值 4B 内容: lrpc
         byteBuf.writeBytes(MessageFormatConstant.MAGIC);
         // 版本 1B 内容：1
@@ -67,8 +71,9 @@ public class RpcRequestEncoder extends MessageToByteEncoder<RpcRequest> {
         if(rpcRequest.getRequestType() != RequestType.HEART_BEAT.getId()) {
             byteBuf.writeBytes(bodyBytes);
         }
-
-        log.debug("请求【{}】已经在客户端完成编码",rpcRequest.getRequestId());
+        if(rpcRequest.getRequestType() != RequestType.HEART_BEAT.getId()) {
+            log.debug("请求【{}】已经在客户端完成编码", rpcRequest.getRequestId());
+        }
 
 
 

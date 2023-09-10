@@ -31,6 +31,8 @@ public class ConsistentHashLoadBalancer extends AbstractLoadBalancer {
     }
 
 
+
+
     private static class ConsistentHashSelector implements Selector {
         private SortedMap<Integer, InetSocketAddress> circle = new TreeMap<>();
 
@@ -55,6 +57,8 @@ public class ConsistentHashLoadBalancer extends AbstractLoadBalancer {
             }
             return circle.get(hash);
         }
+
+
 
 
         private void addNodeToCircle(InetSocketAddress address) {

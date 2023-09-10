@@ -104,13 +104,16 @@ public class RpcResponseDecoder extends LengthFieldBasedFrameDecoder {
         // 10. 对body进行解压缩
         Compressor compressor = CompressFactory.getCompressor(CompressType.getNameByType(compressType));
         body = compressor.decompress(body);
-        log.debug("请求【{}】的响应已经在客户端使用[{}]完成解压缩",response.getRequestId(),CompressType.getNameByType(compressType));
-
+        if(body.length != 0) {
+            log.debug("请求【{}】的响应已经在客户端使用[{}]完成解压缩", response.getRequestId(), CompressType.getNameByType(compressType));
+        }
         // 11. 对body进行反序列化
         Serializer serializer = SerializerFactory.getSerializer(SerializerType.getNameByType(serializeType));
         Object object = serializer.deserialize(body, Object.class);
         response.setBody(object);
-        log.debug("请求【{}】的响应已在客户端完成解码",response.getRequestId());
+        if(body.length !=0) {
+            log.debug("请求【{}】的响应已在客户端完成解码", response.getRequestId());
+        }
         return response;
 
 

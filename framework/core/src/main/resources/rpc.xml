@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!DOCTYPE configuration SYSTEM "http://rpc-config.dtd">
+<configuration>
+
+    <port>8099</port>
+    <appName>rpc-default-app</appName>
+    <!-- 二选一 -->
+    <serializeType type="hessian"/>
+    <serializer class="com.xizhe.serialize.HessianSerializer"/>
+    <!-- 二选一 -->
+    <compressType type="gzip"/>
+    <compressor class="com.xizhe.compress.GzipCompressor"/>
+    <registry url="zookeeper://127.0.0.1:2181"/>
+    <loadBalancer class="com.xizhe.loadbalance.impl.RoundRobinLoadBalancer"/>
+    <idGenerator class="com.xizhe.IdGenerator" dataCenterId="1" machineId="2"/>
+</configuration>

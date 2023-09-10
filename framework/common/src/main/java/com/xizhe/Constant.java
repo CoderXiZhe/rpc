@@ -17,4 +17,6 @@ public class Constant {
 
     public static final String BASE_CONSUMERS_PATH = "/rpc-metadata/consumers";
 
+    public static final int port  = 8099;
+
 }

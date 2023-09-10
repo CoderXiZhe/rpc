@@ -7,8 +7,11 @@ import com.xizhe.discovery.AbstractRegistry;
 import com.xizhe.excptions.NetWorkException;
 import com.xizhe.utils.NetUtils;
 import com.xizhe.utils.ZookeeperUtils;
+import com.xizhe.watch.UpAndDownWatcher;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
 
 import java.net.InetSocketAddress;
@@ -46,7 +49,7 @@ public class ZookeeperRegistry extends AbstractRegistry {
         }
         // 创建本机临时节点 ip:port
         // todo ： 后续处理端口问题
-        String node = nodePath + "/" + NetUtils.getIp() + ":" + 8099;
+        String node = nodePath + "/" + NetUtils.getIp() + ":" + Constant.port;
         boolean exist1 = ZookeeperUtils.exist(zooKeeper, node, null);
         if(!exist1) {
             ZookeeperNode zookeeperNode = new ZookeeperNode(node,null);
@@ -60,7 +63,7 @@ public class ZookeeperRegistry extends AbstractRegistry {
         // 1. 找到对应服务的节点
         String serviceNode = Constant.BASE_PROVIDERS_PATH + "/" + serviceName;
         // 2. 获取该节点的子节点
-        List<String> children = ZookeeperUtils.getChildren(zooKeeper, serviceNode,null);
+        List<String> children = ZookeeperUtils.getChildren(zooKeeper, serviceNode, new UpAndDownWatcher());
         // 3. 可用服务列表
         List<InetSocketAddress> collect = children.stream().map(ipString -> {
             String[] hostAndPort = ipString.split(":");
@@ -72,8 +75,6 @@ public class ZookeeperRegistry extends AbstractRegistry {
         if(collect.size() == 0) {
             throw new NetWorkException("未发现可用服务！");
         }
-        // todo 每次调用不需要都去注册中心拉取 : 本地缓存 + watcher
-        //      合理选择一个可用服务 ： 负载均衡
 
         return collect;
     }
