@@ -4,15 +4,20 @@ import com.xizhe.RpcBootstrap;
 import com.xizhe.ServiceConfig;
 import com.xizhe.enumeration.RequestType;
 import com.xizhe.enumeration.ResponseCode;
+import com.xizhe.protection.RateLimiter;
+import com.xizhe.protection.TokenBucketRateLimiter;
 import com.xizhe.transport.message.RequestPayload;
 import com.xizhe.transport.message.RpcRequest;
 import com.xizhe.transport.message.RpcResponse;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.SocketAddress;
+import java.util.Map;
 
 /**
  * @author admin
@@ -25,24 +30,40 @@ import java.lang.reflect.Method;
 public class MethodCallHandler extends SimpleChannelInboundHandler<RpcRequest> {
     @Override
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, RpcRequest rpcRequest) throws Exception {
-        // 封装响应
+
+        // 封装部分响应
         RpcResponse response = RpcResponse.builder()
                 .compressType(rpcRequest.getCompressType())
                 .requestId(rpcRequest.getRequestId())
                 .serializeType(rpcRequest.getSerializeType())
-                .responseCode(ResponseCode.SUCCESS.getId())
                 .timestamp(System.currentTimeMillis())
                 .build();
-        if(rpcRequest.getRequestType() == RequestType.HEART_BEAT.getId()) {
-            // 心跳类型 直接写回
-            channelHandlerContext.channel().writeAndFlush(response);
-            return;
+        SocketAddress socketAddress = channelHandlerContext.channel().remoteAddress();
+        Map<SocketAddress, RateLimiter> everyIpRateLimiter = RpcBootstrap.getInstance().getConfiguration().getEveryIpRateLimiter();
+        RateLimiter rateLimiter = everyIpRateLimiter.get(socketAddress);
+        if (rateLimiter == null) {
+            rateLimiter = new TokenBucketRateLimiter(5,1);
+            everyIpRateLimiter.put(socketAddress,rateLimiter);
         }
-        RequestPayload requestPayload = rpcRequest.getRequestPayload();
-        Object result = callTargetMethod(requestPayload);
-        response.setBody(result);
-        // 写出响应
+
+        if(!rateLimiter.allowRequest()) {
+            response.setResponseCode(ResponseCode.RATE_LIMIT.getId());
+        }else if(rpcRequest.getRequestType() == RequestType.HEART_BEAT.getId()) {
+            // 心跳类型 直接写回
+            response.setResponseCode(ResponseCode.SUCCESS_HEART_BEAT.getId());
+        }else {
+            RequestPayload requestPayload = rpcRequest.getRequestPayload();
+            Object result = null;
+            try {
+                result = callTargetMethod(requestPayload);
+                response.setResponseCode(ResponseCode.SUCCESS.getId());
+                response.setBody(result);
+            } catch (Exception e) {
+               response.setResponseCode(ResponseCode.FAIL.getId());
+            }
+        }
         channelHandlerContext.channel().writeAndFlush(response);
+
     }
 
     private Object callTargetMethod(RequestPayload requestPayload) {

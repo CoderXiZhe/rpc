@@ -20,6 +20,8 @@ import java.util.zip.GZIPOutputStream;
 @Slf4j
 public class GzipCompressor implements Compressor {
 
+
+
     @Override
     public byte[] compress(byte[] bytes) {
         if(bytes == null || bytes.length == 0) {

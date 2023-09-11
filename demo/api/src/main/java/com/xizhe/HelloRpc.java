@@ -1,6 +1,7 @@
 package com.xizhe;
 
 import com.xizhe.annotation.RpcApi;
+import com.xizhe.annotation.TryTimes;
 
 /**
  * @author admin
@@ -17,5 +18,7 @@ public interface HelloRpc {
      * @param msg 发送的具体消息
      * @return
      */
+
+    @TryTimes(times = 3,intervalTime = 500)
     String sayHello(String msg);
 }

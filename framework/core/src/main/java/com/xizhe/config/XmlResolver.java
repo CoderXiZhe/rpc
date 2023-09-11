@@ -1,15 +1,12 @@
-package com.xizhe;
+package com.xizhe.config;
 
+import com.xizhe.IdGenerator;
+import com.xizhe.ProtocolConfig;
 import com.xizhe.compress.CompressType;
 import com.xizhe.discovery.RegistryConfig;
 import com.xizhe.loadbalance.LoadBalancer;
-import com.xizhe.serialize.Serializer;
 import com.xizhe.serialize.SerializerType;
-import com.xizhe.utils.ZookeeperUtils;
-import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.zookeeper.ZooKeeper;
-import org.apache.zookeeper.data.Id;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.xml.sax.SAXException;
@@ -22,43 +19,17 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
 
-
 /**
  * @author admin
  * @version 1.0
- * @description: 全局配置类 : 代码配置 -> xml配置 -> 默认项
- * @date 2023/9/10 16:19
+ * @description: TODO
+ * @date 2023/9/11 12:31
  */
 
-@Data
 @Slf4j
-public class Configuration {
+public class XmlResolver {
 
-    private int port = 8099;
-
-    private String appName;
-
-    private ProtocolConfig protocolConfig;
-
-    private RegistryConfig registryConfig = new RegistryConfig("zookeeper://127.0.0.1:2181");
-
-    // id生成器
-    private IdGenerator idGenerator = new IdGenerator(1,2);
-
-    // 默认使用jdk方式进行序列化
-    private byte serializeType = SerializerType.JDK.getType();
-
-    // 默认使用gzip进行压缩
-    private byte compressType = CompressType.GZIP.getType();
-
-    private LoadBalancer loadBalancer;
-
-    public Configuration() {
-        loadFromXMl(this);
-    }
-
-
-    private void loadFromXMl(Configuration configuration) {
+    public void loadFromXMl(Configuration configuration) {
         try {
             // 创建一个document
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -71,14 +42,14 @@ public class Configuration {
             XPathFactory xPathFactory = XPathFactory.newInstance();
             XPath xPath = xPathFactory.newXPath();
             // 解析表达式
-            this.setPort(resolvePort(doc, xPath));
-            this.setAppName(resolveAppName(doc,xPath));
-            this.setCompressType(resolveCompressType(doc,xPath));
-            this.setSerializeType(resolveSerializeType(doc,xPath));
-            this.setIdGenerator(resolveIdGenerator(doc,xPath));
-            this.setRegistryConfig(resolveRegistryConfig(doc,xPath));
-            this.setLoadBalancer(resolveLoadBalancer(doc,xPath));
-            this.setProtocolConfig(new ProtocolConfig(SerializerType.getNameByType(this.serializeType)));
+            configuration.setPort(resolvePort(doc, xPath));
+            configuration.setAppName(resolveAppName(doc,xPath));
+            configuration.setCompressType(resolveCompressType(doc,xPath));
+            configuration.setSerializeType(resolveSerializeType(doc,xPath));
+            configuration.setIdGenerator(resolveIdGenerator(doc,xPath));
+            configuration.setRegistryConfig(resolveRegistryConfig(doc,xPath));
+            configuration.setLoadBalancer(resolveLoadBalancer(doc,xPath));
+            configuration.setProtocolConfig(new ProtocolConfig(SerializerType.getNameByType(configuration.getSerializeType())));
             System.out.println(1);
         } catch (ParserConfigurationException | IOException | SAXException e) {
             log.error("读取xml配置文件出现异常",e);
@@ -119,7 +90,7 @@ public class Configuration {
         try {
             aClass = Class.forName(classname);
             Object instance = aClass.getConstructor(new Class[]{long.class, long.class})
-            .newInstance(Long.parseLong(machineId), Long.parseLong(dataCenterId));
+                    .newInstance(Long.parseLong(machineId), Long.parseLong(dataCenterId));
             return (IdGenerator) instance;
         } catch (ClassNotFoundException | InstantiationException | InvocationTargetException | NoSuchMethodException | IllegalAccessException e) {
             throw new RuntimeException(e);
@@ -179,7 +150,7 @@ public class Configuration {
             XPathExpression expression = xPath.compile(expr);
             Node targetNode =  (Node)expression.evaluate(doc, XPathConstants.NODE);
             return targetNode.getAttributes().getNamedItem(attributeName).getNodeValue();
-        } catch (XPathExpressionException  e) {
+        } catch (XPathExpressionException e) {
             e.printStackTrace();
         }
         return null;
@@ -203,9 +174,4 @@ public class Configuration {
         }
         return null;
     }
-
-    public static void main(String[] args) {
-        new Configuration();
-    }
-
 }

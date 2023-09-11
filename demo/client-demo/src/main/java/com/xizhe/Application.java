@@ -34,8 +34,12 @@ public class Application {
                 .reference(reference);
 
         HelloRpc proxy = reference.get();
-        String result = proxy.sayHello("rpc");
-        System.out.println(result);
+        for (int i = 0; i < 600; i++) {
+            String result = proxy.sayHello("rpc");
+            System.out.println(result);
+        }
+
+
 
 
 

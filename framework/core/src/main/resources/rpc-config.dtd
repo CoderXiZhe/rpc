@@ -42,28 +42,3 @@
                 dataCenterId CDATA #REQUIRED
                 machineId CDATA #REQUIRED
                 >
-
-
-
-        <!--常规实体之内部实体-->
-        <!ENTITY generalEntityOfInner "常规实体之内部实体">
-        <!--常规实体之外部实体-->
-        <!ENTITY generalEntityOfOuter SYSTEM "EntityDTD.dtd">
-        <!--字符实体：参考网站https://www.teshuzifu.cn/-->
-        <!ENTITY characterEntity "&#928;">
-        <!--内置实体-->
-        <!ENTITY buildInEntity "&lt;&amp;&gt;">
-        <!--参数实体-->
-        <!ENTITY % parameterEntity "id">
-        <!ENTITY parameterEntityActual "%parameterEntity;">
-
-        <!ELEMENT root (entityElementContext,entityAttribute)>
-        <!ELEMENT entityElementContext (generalEntity,characterEntity,buildInEntity,parameterEntityActual)>
-        <!ELEMENT generalEntity (#PCDATA)>
-        <!ELEMENT characterEntity (#PCDATA)>
-        <!ELEMENT buildInEntity (#PCDATA)>
-        <!ELEMENT parameterEntityActual (#PCDATA)>
-
-        <!--实体之应用于属性-->
-        <!ELEMENT entityAttribute (#PCDATA)>
-        <!ATTLIST entityAttribute %parameterEntity; CDATA #REQUIRED name CDATA #REQUIRED>

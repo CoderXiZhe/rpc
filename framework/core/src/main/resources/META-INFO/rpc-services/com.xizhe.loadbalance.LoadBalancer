@@ -1,0 +1,3 @@
+com.xizhe.loadbalance.impl.ConsistentHashLoadBalancer
+com.xizhe.loadbalance.impl.MinimumRespTimeLoadBalancer
+com.xizhe.loadbalance.impl.RoundRobinLoadBalancer
